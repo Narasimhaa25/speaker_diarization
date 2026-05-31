@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { apiFetch } from '../utils'
 import useMicRecorder from '../hooks/useMicRecorder'
 import WaveformCanvas from '../components/WaveformCanvas'
 import AnalysisResults from '../components/AnalysisResults'

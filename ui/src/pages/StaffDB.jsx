@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { fmtDate } from '../utils'
+import { fmtDate, apiFetch } from '../utils'
 
 export default function StaffDB({ setPage }) {
   const [staff, setStaff] = useState([])
