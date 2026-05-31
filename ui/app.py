@@ -111,7 +111,7 @@ _diar_model = None
 _staff_db   = None
 
 # Default threshold — matches DEFAULT_SIMILARITY_THRESHOLD in staff_identifier.py
-DEFAULT_THRESHOLD = 0.90
+DEFAULT_THRESHOLD = 0.93
 
 
 def get_embedder():
@@ -288,6 +288,9 @@ def _run_pipeline(
 
     for seg in segments:
         chunk = audio[int(seg.start * sr): int(seg.end * sr)]
+        raw_rms = float(np.sqrt(np.mean(chunk ** 2)))
+        if raw_rms < 0.005:  # skip noise/silence before normalization amplifies it
+            continue
         if len(chunk) < int(0.3 * sr):   # skip segments < 0.3s
             continue
         chunk = normalize_audio(chunk)

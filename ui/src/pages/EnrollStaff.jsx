@@ -168,7 +168,7 @@ export default function EnrollStaff({ setPage }) {
             <div className="enroll-form">
               <div className="form-group">
                 <label>Full Name<span className="form-required">*</span></label>
-                <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Rushika Karampuri" />
+                <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Rushika" />
               </div>
               <div className="form-group">
                 <label>Role</label>

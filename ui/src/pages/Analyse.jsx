@@ -29,7 +29,7 @@ function useProgressTicker(running) {
 }
 
 export default function Analyse({ setLastResult }) {
-  const [threshold, setThreshold] = useState(0.90)
+  const [threshold, setThreshold] = useState(0.93)
   const [maxDur, setMaxDur] = useState(120)
   const [micResult, setMicResult]   = useState(null)
   const [fileResult, setFileResult] = useState(null)
