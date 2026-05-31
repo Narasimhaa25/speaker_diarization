@@ -117,12 +117,16 @@ BAD_ENROLLMENT = {
 
 # ─── Validation thresholds (used by enrollment_validator.py) ─────────────────
 
+# NOTE: These runtime thresholds are intentionally more permissive than the
+# spec values above. The spec defines production aspirational targets; these
+# thresholds handle real-world browser mic recordings (WebM codec, variable
+# levels, background noise) without over-rejecting valid enrollments.
 VALIDATION_THRESHOLDS = {
-    "min_duration_sec":  EnrollmentSpec().min_utterance_duration_sec,
-    "min_snr_db":        EnrollmentSpec().min_snr_db,
-    "min_rms_level":     0.02,    # Below this → microphone too far or silent
-    "max_clipping_ratio": 0.001,  # Fraction of samples at ±1.0 before rejection
-    "sample_rate_hz":    EnrollmentSpec().target_sample_rate_hz,
+    "min_duration_sec":   3.0,    # 3s — browser recordings are typically 5-15s
+    "min_snr_db":         3.0,    # 3 dB — WebM codec adds noise; real mics rarely hit 20 dB
+    "min_rms_level":      0.001,  # Permissive — browser audio levels vary widely
+    "max_clipping_ratio": 0.01,   # 1% tolerance — slight clipping is acceptable
+    "sample_rate_hz":     EnrollmentSpec().target_sample_rate_hz,
 }
 
 

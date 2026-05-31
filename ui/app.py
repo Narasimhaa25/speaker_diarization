@@ -106,10 +106,12 @@ def handle_exception(error):
     return jsonify({"error": f"Server error: {str(error)}"}), 500
 
 # ── lazy-load heavy models once ───────────────────────────────────────────────
-_embedder      = None
-_diar_model    = None
-_staff_db      = None
-_identifier    = None
+_embedder   = None
+_diar_model = None
+_staff_db   = None
+
+# Default threshold — matches DEFAULT_SIMILARITY_THRESHOLD in staff_identifier.py
+DEFAULT_THRESHOLD = 0.90
 
 
 def get_embedder():
@@ -136,14 +138,6 @@ def get_staff_db():
         _staff_db = StaffDBManager(STAFF_DB, key)
         _staff_db.load()
     return _staff_db
-
-
-def get_identifier():
-    global _identifier
-    if _identifier is None:
-        from core.staff_identifier import StaffIdentifier
-        _identifier = StaffIdentifier(get_staff_db(), threshold=0.75)  # Production threshold
-    return _identifier
 
 
 # ── routes ────────────────────────────────────────────────────────────────────
@@ -185,7 +179,7 @@ def analyse_sample():
     data = request.get_json()
     rel_path     = data.get("path", "")
     max_duration = float(data.get("max_duration", 120))
-    threshold    = float(data.get("threshold", 0.90))
+    threshold    = float(data.get("threshold", DEFAULT_THRESHOLD))
 
     # Security: only allow files inside amicorpus/
     full_path = (ROOT / rel_path).resolve()
@@ -211,7 +205,7 @@ def analyse():
         return jsonify({"error": f"Unsupported format '{ext}'. Supported: WAV, MP3, MP4, MPEG, M4A, FLAC, OGG, AAC, OPUS, AIFF, WMA"}), 400
 
     max_duration = float(request.form.get("max_duration", 120))
-    threshold    = float(request.form.get("threshold", 0.90))
+    threshold    = float(request.form.get("threshold", DEFAULT_THRESHOLD))
 
     with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
         f.save(tmp.name)
@@ -472,7 +466,7 @@ def analyse_realtime():
     else:
         ext = ".webm"
 
-    threshold    = float(request.form.get("threshold", 0.90))
+    threshold    = float(request.form.get("threshold", DEFAULT_THRESHOLD))
     max_duration = float(request.form.get("max_duration", 120))
 
     with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
@@ -584,25 +578,15 @@ def enroll_staff():
             except:
                 pass
 
-        # ✓ PRODUCTION: Check duration FIRST (10-30 seconds)
         duration = len(audio) / sr
         sample_durations.append(duration)
-        
-        if duration < 10.0:
+
+        if duration < 3.0:
             validation_results.append({
                 "index": i,
                 "status": "FAIL",
                 "duration_sec": round(duration, 1),
-                "reason": f"Too short: {round(duration, 1)}s (minimum 10 seconds)"
-            })
-            continue
-        
-        if duration > 30.0:
-            validation_results.append({
-                "index": i,
-                "status": "FAIL",
-                "duration_sec": round(duration, 1),
-                "reason": f"Too long: {round(duration, 1)}s (maximum 30 seconds)"
+                "reason": f"Too short: {round(duration, 1)}s (minimum 3 seconds — speak for longer)"
             })
             continue
 
@@ -646,15 +630,16 @@ def enroll_staff():
                 "reason": f"Embedding failed: {str(e)}"
             })
 
-    # ✓ PRODUCTION: All 3 must pass
-    if len(embeddings) != 3:
-        failed_count = 3 - len(embeddings)
+    # Need at least 1 valid embedding to enroll
+    if len(embeddings) == 0:
         failed_indices = [v["index"] for v in validation_results if v["status"] == "FAIL"]
+        reasons = [v.get("reason") or ", ".join(v.get("reasons", [])) for v in validation_results if v["status"] == "FAIL"]
         return jsonify({
-            "error": f"{failed_count} of 3 samples failed quality checks. All 3 are required for enrollment.",
+            "error": "All voice samples failed quality checks. Please re-record.",
             "failed_samples": failed_indices,
             "validation": validation_results,
-            "guidance": "Please re-record the failed samples. Ensure: quiet background, clear speech, 10-30 seconds each.",
+            "details": reasons,
+            "guidance": "Ensure: speak clearly for 3+ seconds, quiet background, microphone not too far.",
         }), 400
 
     # Average embeddings
@@ -741,20 +726,20 @@ def reenroll_staff(staff_id):
         return jsonify({"error": "At least one audio recording required"}), 400
 
     import numpy as np
-    import tempfile, os
     from utils.audio_utils import normalize_audio
     from enrollment.enrollment_validator import EnrollmentValidator
 
     embedder   = get_embedder()
     validator  = EnrollmentValidator()
     embeddings = []
+    errors     = []
 
-    for blob in audio_files:
-        ext = ".webm"
-        ct  = blob.content_type or ""
-        if "wav"  in ct: ext = ".wav"
+    for i, blob in enumerate(audio_files):
+        ct = blob.content_type or ""
+        if "wav" in ct:   ext = ".wav"
         elif "ogg" in ct: ext = ".ogg"
         elif "mp4" in ct or "m4a" in ct: ext = ".m4a"
+        else: ext = ".webm"
 
         with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
             blob.save(tmp.name)
@@ -767,14 +752,22 @@ def reenroll_staff(staff_id):
                 audio = normalize_audio(audio)
                 emb = embedder.embed(audio, sr)
                 embeddings.append(emb)
-        except Exception:
-            pass
+            else:
+                errors.append(f"Sample {i+1}: {'; '.join(vr.rejection_reasons)}")
+        except Exception as e:
+            errors.append(f"Sample {i+1}: {str(e)}")
+            print(f"⚠ reenroll sample {i+1} failed: {e}")
         finally:
-            try: os.unlink(tmp_path)
-            except: pass
+            try:
+                os.unlink(tmp_path)
+            except OSError as e:
+                print(f"⚠ cleanup failed: {e}")
 
     if not embeddings:
-        return jsonify({"error": "No valid recordings passed quality checks"}), 400
+        return jsonify({
+            "error": "No valid recordings passed quality checks",
+            "details": errors,
+        }), 400
 
     avg_emb = np.mean(np.stack(embeddings, axis=0), axis=0)
     norm = np.linalg.norm(avg_emb)
@@ -783,9 +776,12 @@ def reenroll_staff(staff_id):
 
     try:
         db.update_staff(staff_id, avg_emb, n_samples=len(embeddings))
-        global _identifier
-        _identifier = None
-        return jsonify({"success": True, "staff_id": staff_id, "n_samples": len(embeddings)})
+        return jsonify({
+            "success": True,
+            "staff_id": staff_id,
+            "n_samples": len(embeddings),
+            "warnings": errors if errors else None,
+        })
     except KeyError:
         return jsonify({"error": f"Staff ID not found: {staff_id}"}), 404
 

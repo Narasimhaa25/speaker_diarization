@@ -59,28 +59,21 @@ export default function Analyse({ setLastResult }) {
     fd.append('threshold', threshold)
     fd.append('max_duration', maxDur)
     setFileRunning(true); setFileError(''); setFileResult(null)
-    try {
-      const resp = await fetch('/analyse', { method: 'POST', body: fd })
-      const data = await resp.json()
-      setFileRunning(false)
-      if (data.error) setFileError(data.error)
-      else { setFileResult(data); setLastResult(data) }
-    } catch (err) { setFileRunning(false); setFileError('Request failed: ' + err.message) }
+    const { ok, data, error } = await apiFetch('/analyse', { method: 'POST', body: fd })
+    setFileRunning(false)
+    if (!ok) setFileError(error)
+    else { setFileResult(data); setLastResult(data) }
   }
 
   async function runSample(path) {
     setActiveAmi(path); setFileRunning(true); setFileError(''); setFileResult(null)
-    try {
-      const resp = await fetch('/analyse_sample', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path, threshold, max_duration: maxDur }),
-      })
-      const data = await resp.json()
-      setFileRunning(false)
-      if (data.error) setFileError(data.error)
-      else { setFileResult(data); setLastResult(data) }
-    } catch (err) { setFileRunning(false); setFileError('Request failed: ' + err.message) }
-    setActiveAmi(null)
+    const { ok, data, error } = await apiFetch('/analyse_sample', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path, threshold, max_duration: maxDur }),
+    })
+    setFileRunning(false); setActiveAmi(null)
+    if (!ok) setFileError(error)
+    else { setFileResult(data); setLastResult(data) }
   }
 
   async function submitMic() {
@@ -90,13 +83,10 @@ export default function Analyse({ setLastResult }) {
     fd.append('audio', mic.blob, 'recording.webm')
     fd.append('threshold', threshold)
     fd.append('max_duration', maxDur)
-    try {
-      const resp = await fetch('/analyse_realtime', { method: 'POST', body: fd })
-      const data = await resp.json()
-      setMicRunning(false)
-      if (data.error) setMicError(data.error)
-      else { setMicResult(data); setLastResult(data) }
-    } catch (err) { setMicRunning(false); setMicError('Request failed: ' + err.message) }
+    const { ok, data, error } = await apiFetch('/analyse_realtime', { method: 'POST', body: fd })
+    setMicRunning(false)
+    if (!ok) setMicError(error)
+    else { setMicResult(data); setLastResult(data) }
   }
 
   const meetings = {}

@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { apiFetch } from '../utils'
 
 const PROMPTS = [
   "Hello, welcome to the store. How can I assist you today?",
@@ -55,7 +56,6 @@ function StepProgress({ step, saveResult }) {
 export default function EnrollStaff({ setPage }) {
   const [step, setStep] = useState(1)
   const [name, setName] = useState('')
-  const [staffId, setStaffId] = useState('')
   const [role, setRole] = useState('associate')
   const [slots, setSlots] = useState(INIT_SLOTS())
   const [activeSlot, setActiveSlot] = useState(-1)
@@ -117,7 +117,7 @@ export default function EnrollStaff({ setPage }) {
 
   function goStep3() {
     const ready = slots.filter(s => s.blob !== null).length
-    if (ready === 0) { alert('Please record at least one voice sample.'); return }
+    if (ready < 3) { alert(`Please record all 3 voice samples (${ready}/3 done).`); return }
     setStep(3); setSaveResult(null); setSaveError('')
   }
 
@@ -129,17 +129,19 @@ export default function EnrollStaff({ setPage }) {
     fd.append('staff_name', name.trim())
     fd.append('staff_role', role)
     recordings.forEach((s, i) => fd.append(`audio_${i}`, s.blob, `rec_${i}.webm`))
-    try {
-      const resp = await fetch('/enroll', { method: 'POST', body: fd })
-      const data = await resp.json()
-      if (data.error) setSaveError(data.error)
-      else setSaveResult(data)
-    } catch (err) { setSaveError('Request failed: ' + err.message) }
+    const { ok, data, error } = await apiFetch('/enroll', { method: 'POST', body: fd })
+    if (!ok) {
+      let msg = error
+      if (data.details?.length > 0)
+        msg += '\n\nDetails:\n' + data.details.map((r, i) => `Sample ${i+1}: ${r}`).join('\n')
+      if (data.guidance) msg += '\n\n' + data.guidance
+      setSaveError(msg)
+    } else setSaveResult(data)
     setSaving(false)
   }
 
   function reset() {
-    setStep(1); setName(''); setStaffId(''); setRole('associate')
+    setStep(1); setName(''); setRole('associate')
     setSlots(INIT_SLOTS()); setActiveSlot(-1); setSaveResult(null); setSaveError('')
   }
 
@@ -164,10 +166,6 @@ export default function EnrollStaff({ setPage }) {
         {step === 1 && (
           <div style={{ animation: 'fadeIn 0.25s ease' }}>
             <div className="enroll-form">
-              <div className="form-group">
-                <label>Staff ID <span style={{ color: 'var(--muted)', fontSize: '0.72rem' }}>(auto-generated if blank)</span></label>
-                <input value={staffId} onChange={e => setStaffId(e.target.value)} placeholder="e.g. staff_001" />
-              </div>
               <div className="form-group">
                 <label>Full Name<span className="form-required">*</span></label>
                 <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Rushika Karampuri" />
@@ -225,7 +223,7 @@ export default function EnrollStaff({ setPage }) {
 
             <div style={{ marginTop: 22, display: 'flex', gap: 10, alignItems: 'center' }}>
               <button className="btn btn-ghost" onClick={() => { stopRecord(activeSlot); setStep(1) }}>← Back</button>
-              <button className="btn" disabled={readyCount === 0} onClick={goStep3}>
+              <button className="btn" disabled={readyCount < 3} onClick={goStep3}>
                 Next: Save ({readyCount}/3) →
               </button>
               {readyCount > 0 && (
@@ -254,7 +252,9 @@ export default function EnrollStaff({ setPage }) {
               </div>
             )}
 
-            {saveError && <div className="error-box">⚠ {saveError}</div>}
+            {saveError && (
+              <div className="error-box" style={{ whiteSpace: 'pre-line' }}>⚠ {saveError}</div>
+            )}
 
             {saveResult && (
               <div className="success-box" style={{ marginTop: 16 }}>
