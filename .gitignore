@@ -1,0 +1,42 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+.pytest_cache/
+
+# Environment & secrets
+.env
+*.key
+*.staffdb
+
+# Node
+ui/node_modules/
+ui/dist/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Model weights (large binary files)
+speaker_diarization/models/*.onnx
+pretrained_models/
+
+# AMI corpus data
+amicorpus/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log

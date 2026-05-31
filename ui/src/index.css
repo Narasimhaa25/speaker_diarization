@@ -1,0 +1,111 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Light mode (default) ────────────────────────────────────────────────── */
+:root {
+  --bg:          #f0f4f8;
+  --bg2:         #ffffff;
+  --surface:     #ffffff;
+  --surface2:    #f1f5f9;
+  --border:      #e2e8f0;
+  --border2:     #cbd5e1;
+  --blue:        #2563eb;
+  --blue-dim:    #1d4ed8;
+  --blue-glow:   rgba(37,99,235,0.12);
+  --green:       #059669;
+  --green-dim:   #047857;
+  --green-glow:  rgba(5,150,105,0.12);
+  --cyan:        #0891b2;
+  --cyan-dim:    #0e7490;
+  --amber:       #d97706;
+  --amber-dim:   #b45309;
+  --red:         #dc2626;
+  --red-dark:    #b91c1c;
+  --red-glow:    rgba(220,38,38,0.12);
+  --purple:      #7c3aed;
+  --muted:       #64748b;
+  --subtle:      #94a3b8;
+  --text:        #0f172a;
+  --text-dim:    #334155;
+  --text-faint:  #64748b;
+  --radius:      12px;
+  --radius-sm:   8px;
+  --radius-xs:   6px;
+  --shadow:      0 4px 24px rgba(15,23,42,0.10);
+  --shadow-sm:   0 2px 8px rgba(15,23,42,0.07);
+  --glow-blue:   0 0 20px rgba(37,99,235,0.15);
+  --glow-green:  0 0 20px rgba(5,150,105,0.15);
+
+  /* canvas donut hole color */
+  --donut-bg:    #ffffff;
+}
+
+/* ── Dark mode ───────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:          #080b14;
+  --bg2:         #0d1117;
+  --surface:     #111827;
+  --surface2:    #1a2236;
+  --border:      #1f2d45;
+  --border2:     #2d3f5c;
+  --blue:        #4f8ef7;
+  --blue-dim:    #2563eb;
+  --blue-glow:   rgba(79,142,247,0.18);
+  --green:       #34d399;
+  --green-dim:   #059669;
+  --green-glow:  rgba(52,211,153,0.18);
+  --cyan:        #67e8f9;
+  --cyan-dim:    #0891b2;
+  --amber:       #fbbf24;
+  --amber-dim:   #d97706;
+  --red:         #f87171;
+  --red-dark:    #dc2626;
+  --red-glow:    rgba(248,113,113,0.18);
+  --purple:      #a78bfa;
+  --muted:       #64748b;
+  --subtle:      #374151;
+  --text:        #f1f5f9;
+  --text-dim:    #94a3b8;
+  --text-faint:  #475569;
+  --shadow:      0 4px 24px rgba(0,0,0,0.4);
+  --shadow-sm:   0 2px 8px rgba(0,0,0,0.3);
+  --glow-blue:   0 0 20px rgba(79,142,247,0.25);
+  --glow-green:  0 0 20px rgba(52,211,153,0.25);
+  --donut-bg:    #111827;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+button { font-family: inherit; cursor: pointer; }
+input, select, textarea { font-family: inherit; }
+a { text-decoration: none; }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+@keyframes pulse        { 0%,100%{opacity:1} 50%{opacity:0.6} }
+@keyframes blink        { 0%,100%{opacity:1} 50%{opacity:0.15} }
+@keyframes spin         { to { transform: rotate(360deg); } }
+@keyframes fadeIn       { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@keyframes slideIn      { from{opacity:0;transform:translateX(-12px)} to{opacity:1;transform:translateX(0)} }
+@keyframes scaleIn      { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
+@keyframes mic-pulse    {
+  0%,100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); border-color: var(--red); }
+  50%      { box-shadow: 0 0 0 10px rgba(220,38,38,0.1); border-color: var(--red-dark); }
+}
+@keyframes gradientShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}

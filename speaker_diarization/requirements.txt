@@ -1,0 +1,35 @@
+# Speaker Diarization & Staff Voice ID — dependencies
+# Python >= 3.9
+
+# Diarization
+pyannote.audio>=3.1.0
+pyannote-onnx>=0.1.0          # ONNX runtime version of pyannote
+
+# Speaker embeddings
+speechbrain>=1.0.0             # Source of pre-trained ECAPA-TDNN
+
+# ONNX runtime
+onnxruntime>=1.17.0            # CPU inference
+onnxruntime-extensions>=0.9.0
+
+# Audio processing
+librosa>=0.10.0
+soundfile>=0.12.0
+numpy>=1.24.0
+scipy>=1.11.0
+
+# Encryption (staff DB)
+cryptography>=42.0.0
+
+# Evaluation & tuning
+scikit-learn>=1.3.0
+matplotlib>=3.8.0
+pyannote.metrics>=3.2.0        # DER computation against RTTM files
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# Utilities
+tqdm>=4.66.0
+pyyaml>=6.0.1

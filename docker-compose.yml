@@ -1,0 +1,8 @@
+services:
+  demo:
+    build: .
+    volumes:
+      # Mount audio files so they don't bloat the image
+      - ./amicorpus:/app/amicorpus:ro
+    environment:
+      - PYTHONUNBUFFERED=1
