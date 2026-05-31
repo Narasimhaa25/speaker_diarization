@@ -122,10 +122,10 @@ BAD_ENROLLMENT = {
 # thresholds handle real-world browser mic recordings (WebM codec, variable
 # levels, background noise) without over-rejecting valid enrollments.
 VALIDATION_THRESHOLDS = {
-    "min_duration_sec":   3.0,    # 3s — browser recordings are typically 5-15s
-    "min_snr_db":         3.0,    # 3 dB — WebM codec adds noise; real mics rarely hit 20 dB
-    "min_rms_level":      0.001,  # Permissive — browser audio levels vary widely
-    "max_clipping_ratio": 0.01,   # 1% tolerance — slight clipping is acceptable
+    "min_duration_sec":   3.0,    # 3s minimum
+    "min_snr_db":         -999,   # Disabled — SNR estimate is unreliable for browser WebM audio
+    "min_rms_level":      0.0001, # Near-zero — only reject completely silent recordings
+    "max_clipping_ratio": 0.05,   # 5% tolerance
     "sample_rate_hz":     EnrollmentSpec().target_sample_rate_hz,
 }
 
