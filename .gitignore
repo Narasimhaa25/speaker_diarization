@@ -3,15 +3,11 @@ venv/
 __pycache__/
 *.pyc
 *.pyo
-*.pyd
 *.egg-info/
-.eggs/
-dist/
-build/
-*.egg
 .pytest_cache/
+.eggs/
 
-# Environment & secrets
+# Secrets & data
 .env
 *.key
 *.staffdb
@@ -22,21 +18,16 @@ ui/dist/
 
 # macOS
 .DS_Store
-.AppleDouble
-.LSOverride
 
-# Model weights (large binary files)
+# Model weights (large binaries — download via setup.sh)
 speaker_diarization/models/*.onnx
 pretrained_models/
 
-# AMI corpus data
+# Audio data
 amicorpus/
 
-# IDE
+# IDE / tools
 .vscode/
 .idea/
 *.swp
-*.swo
-
-# Logs
-*.log
+.serena/cache/
