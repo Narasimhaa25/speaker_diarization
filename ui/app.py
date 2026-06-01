@@ -49,6 +49,9 @@ if _env_file.exists():
 # ── ffmpeg path ───────────────────────────────────────────────────────────────
 FFMPEG = shutil.which("ffmpeg") or "/opt/homebrew/bin/ffmpeg"
 
+# Seed numpy for deterministic clustering across machines
+import numpy as _np_seed; _np_seed.random.seed(42)
+
 
 def _to_wav(src_path: str) -> str:
     """
@@ -417,11 +420,15 @@ def _energy_fallback(audio, sr):
         )]
 
     # ── 4. Cluster embeddings → speaker labels ────────────────────────────────
+    # Sort input by first embedding dimension for deterministic ordering
+    # across machines (avoids float precision differences in linkage computation)
     X = sk_normalize(np.array(embeddings), norm="l2")
+    sort_idx = np.argsort(X[:, 0])
+    X_sorted = X[sort_idx]
 
-    # Distance threshold: tighter for short audio (less acoustic diversity)
-    # 0.45 cosine distance ≈ 0.55 cosine similarity — generous but avoids over-splitting
-    dist_threshold = 0.45 if duration < 30 else 0.35
+    # Raised threshold (0.55) reduces over-splitting from tiny float differences
+    # across different CPU architectures / numpy versions
+    dist_threshold = 0.55 if duration < 30 else 0.45
 
     try:
         clust = AgglomerativeClustering(
@@ -430,9 +437,10 @@ def _energy_fallback(audio, sr):
             metric="cosine",
             linkage="average",
         )
-        labels = clust.fit_predict(X)
+        labels_sorted = clust.fit_predict(X_sorted)
+        labels = np.empty_like(labels_sorted)
+        labels[sort_idx] = labels_sorted
     except Exception:
-        # Fallback: all same speaker
         labels = [0] * len(embeddings)
 
     # Cap at 6 speakers — re-cluster if fragmented
