@@ -1,8 +1,17 @@
 services:
-  demo:
+  app:
     build: .
+    ports:
+      - "5001:5001"
     volumes:
-      # Mount audio files so they don't bloat the image
+      # Staff DB and key — persisted outside container so enrollments survive restarts
+      - ./ami_staff.staffdb:/app/ami_staff.staffdb
+      - ./ami_staff.key:/app/ami_staff.key
+      # .env for HF_TOKEN
+      - ./.env:/app/.env
+      # AMI corpus (optional — only needed for sample files feature)
       - ./amicorpus:/app/amicorpus:ro
     environment:
       - PYTHONUNBUFFERED=1
+      - SB_LOCAL_FETCH_STRATEGY=copy
+    restart: unless-stopped

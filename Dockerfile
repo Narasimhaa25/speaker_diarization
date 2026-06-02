@@ -1,62 +1,76 @@
+# ── Stage 1: Build React frontend ─────────────────────────────────────────────
+FROM node:20-slim AS frontend
+WORKDIR /app/ui
+COPY ui/package*.json ./
+RUN npm install
+COPY ui/ ./
+RUN npm run build
+
+# ── Stage 2: Python backend + final image ─────────────────────────────────────
 FROM python:3.9-slim
 
-# System deps for audio processing
+# System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     libsndfile1 \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Install Python deps first (cached layer)
-COPY speaker_diarization/requirements.txt requirements.txt
+# Install Python dependencies with exact pinned versions
+# torch/torchaudio pinned to 2.4 — works with both pyannote 3.x and speechbrain 1.0.2
 RUN pip install --no-cache-dir \
-    numpy scipy librosa soundfile \
-    onnxruntime \
-    cryptography \
-    speechbrain \
-    pyannote.audio \
-    scikit-learn \
-    tqdm pyyaml \
-    && pip install --no-cache-dir transformers
+    torch==2.4.0 \
+    torchaudio==2.4.0
 
-# Copy source code
+RUN pip install --no-cache-dir \
+    numpy==1.26.4 \
+    scipy==1.13.1 \
+    librosa==0.10.2.post1 \
+    soundfile==0.12.1
+
+RUN pip install --no-cache-dir \
+    hyperpyyaml==0.0.16 \
+    speechbrain==1.0.2
+
+RUN pip install --no-cache-dir \
+    onnxruntime==1.17.3 \
+    scikit-learn==1.5.2 \
+    cryptography==42.0.8 \
+    flask==3.0.3
+
+RUN pip install --no-cache-dir \
+    huggingface-hub==0.24.7 \
+    pyannote.audio==3.3.2 \
+    transformers==4.44.2 \
+    datasets==2.19.0 \
+    tqdm==4.66.5
+
+# Copy Python source
 COPY speaker_diarization/ ./speaker_diarization/
-COPY demo.py ./demo.py
 
-# Copy pre-built assets (ONNX model + staff DB + audio)
+# Copy Flask app
+COPY ui/app.py ./ui/app.py
+
+# Copy pre-built React frontend from Stage 1
+COPY --from=frontend /app/ui/dist ./ui/dist
+
+# Copy pre-exported ONNX model (must exist before building image)
+# Run: PYTHONPATH=speaker_diarization python speaker_diarization/models/export_onnx.py --fp32
 COPY speaker_diarization/models/ecapa_tdnn_int8.onnx ./speaker_diarization/models/ecapa_tdnn_int8.onnx
-COPY ami_staff.staffdb ./ami_staff.staffdb
-COPY ami_staff.key ./ami_staff.key
 
-# Fix SpeechBrain/PyTorch compat patches
-RUN python -c "
-import re, pathlib
+# Copy environment template
+COPY .env.example ./.env.example
 
-# Patch 1: lightning_fabric weights_only
-p = pathlib.Path('/usr/local/lib/python3.9/site-packages/lightning_fabric/utilities/cloud_io.py')
-if p.exists():
-    t = p.read_text()
-    t = re.sub(r'weights_only=weights_only,\n        \)', 'weights_only=False,\n        )', t)
-    p.write_text(t)
+# Set SpeechBrain to copy files instead of symlink (avoids permission issues)
+ENV SB_LOCAL_FETCH_STRATEGY=copy
+ENV PYTHONPATH=speaker_diarization
 
-# Patch 2: speechbrain k2 optional
-p2 = pathlib.Path('/usr/local/lib/python3.9/site-packages/speechbrain/integrations/k2_fsa/__init__.py')
-if p2.exists():
-    t2 = p2.read_text()
-    t2 = t2.replace('raise ImportError(MSG) from e', 'pass  # k2 optional')
-    p2.write_text(t2)
+EXPOSE 5001
 
-# Patch 3: speechbrain linecache fix
-p3 = pathlib.Path('/usr/local/lib/python3.9/site-packages/speechbrain/utils/importutils.py')
-if p3.exists():
-    t3 = p3.read_text()
-    t3 = t3.replace(
-        'importer_frame.filename.endswith(\"/inspect.py\")',
-        'importer_frame.filename.endswith(\"/inspect.py\") or importer_frame.filename.endswith(\"/linecache.py\")'
-    )
-    p3.write_text(t3)
-print('Patches applied')
-"
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5001')" || exit 1
 
-CMD ["python", "demo.py"]
+CMD ["python", "ui/app.py"]
