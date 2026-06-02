@@ -111,6 +111,7 @@ def handle_exception(error):
 # ── lazy-load heavy models once ───────────────────────────────────────────────
 _embedder   = None
 _diar_model = None
+_diar_model_unavailable = False   # True after a failed init — skip retrying
 _staff_db   = None
 
 # Default threshold — matches DEFAULT_SIMILARITY_THRESHOLD in staff_identifier.py
@@ -126,10 +127,17 @@ def get_embedder():
 
 
 def get_diar_model():
-    global _diar_model
+    global _diar_model, _diar_model_unavailable
+    if _diar_model_unavailable:
+        raise RuntimeError("pyannote unavailable — using ECAPA-TDNN fallback")
     if _diar_model is None:
         from models.diarization_model import DiarizationModel
-        _diar_model = DiarizationModel(clustering_threshold=0.70)
+        try:
+            _diar_model = DiarizationModel(clustering_threshold=0.70)
+        except RuntimeError as e:
+            _diar_model_unavailable = True
+            print(f"⚠ Neural diarization unavailable ({e}). File uploads will use ECAPA-TDNN fallback.")
+            raise
     return _diar_model
 
 
@@ -271,8 +279,7 @@ def _run_pipeline(
             else:
                 diar_mode = "pyannote (neural)"
         except Exception as e:
-            print(f"\n⚠ pyannote failed: {e}")
-            traceback.print_exc()
+            print(f"⚠ Diarization fallback: {e}")
             segments = _energy_fallback(audio, sr)
             diar_mode = "ECAPA-TDNN + clustering"
 

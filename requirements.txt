@@ -1,9 +1,28 @@
 # ── Pinned exact versions for reproducibility across machines ──────────────────
 # Do NOT change these without testing on all target platforms.
-# Loose versions (>=) cause different results on different CPUs/OS versions.
+# Last validated: 2026-06-02 on Windows 10 (Python 3.10, CPU-only)
+#
+# IMPORTANT — patched installed packages (do not upgrade without re-applying patches):
+#   torchaudio/__init__.py         — added info() and load() soundfile fallbacks (no FFmpeg)
+#   pyannote/audio/core/io.py      — set_audio_backend guarded with hasattr
+#   pyannote/audio/core/pipeline.py — use_auth_token → token for hf_hub_download
+#   pyannote/audio/core/model.py   — use_auth_token → token for hf_hub_download (x2)
+#   pyannote/audio/pipelines/speaker_verification.py — get/set_audio_backend guarded
+#   pyannote/audio/tasks/segmentation/mixins.py — AudioMetaData shim for torchaudio
+#   speechbrain/utils/torch_audio_backend.py — list_audio_backends guarded
+#   lightning_fabric/utilities/cloud_io.py — weights_only=False for local checkpoints
+#   lightning/fabric/utilities/cloud_io.py — weights_only=False for local checkpoints
+
+# ── PyTorch (CPU-only) ─────────────────────────────────────────────────────────
+# Install from: pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+torch==2.12.0
+torchaudio==2.11.0
+torchcodec==0.13.0
 
 # ── Diarization ────────────────────────────────────────────────────────────────
-pyannote.audio==3.4.0
+pyannote.audio==3.1.1
+lightning==2.6.5
+pytorch-lightning==2.6.5
 
 # ── Speaker embeddings ─────────────────────────────────────────────────────────
 speechbrain==1.0.2
@@ -27,7 +46,8 @@ cryptography==42.0.8
 scikit-learn==1.5.2
 
 # ── HuggingFace ────────────────────────────────────────────────────────────────
-huggingface-hub==0.24.7
+# huggingface-hub 1.x is required — 0.x breaks transformers 5.x import chain
+huggingface-hub==1.17.0
 datasets==2.19.0
 transformers==4.44.2
 

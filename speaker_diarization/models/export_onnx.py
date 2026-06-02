@@ -36,10 +36,14 @@ def export(output_path: Path, quantise: bool = True) -> None:
                 f"SpeechBrain required: pip install speechbrain\n  ({e})"
             ) from e
 
+    # Use copy instead of symlink — symlinks require elevated privileges on Windows.
+    from speechbrain.utils.fetching import LocalStrategy
+
     print("Loading SpeechBrain ECAPA-TDNN (VoxCeleb-trained) …")
     classifier = EncoderClassifier.from_hparams(
         source="speechbrain/spkrec-ecapa-voxceleb",
         savedir="pretrained_models/spkrec-ecapa-voxceleb",
+        local_strategy=LocalStrategy.COPY,
     )
     classifier.eval()
 

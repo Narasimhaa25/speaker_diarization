@@ -20,6 +20,16 @@ except ImportError:
     raise ImportError("onnxruntime required: pip install onnxruntime")
 
 try:
+    # huggingface_hub >= 0.22 removed is_offline_mode from top-level; shim it so
+    # transformers 4.44 (which still imports it) doesn't break the pyannote chain.
+    import os as _os, huggingface_hub as _hfhub
+    if not hasattr(_hfhub, "is_offline_mode"):
+        _hfhub.is_offline_mode = lambda: _os.getenv("HF_HUB_OFFLINE", "0") == "1"
+    del _os, _hfhub
+except Exception:
+    pass
+
+try:
     from pyannote.audio import Pipeline
     PYANNOTE_AVAILABLE = True
 except ImportError:
@@ -106,7 +116,16 @@ class DiarizationModel:
     def _load_pyannote_pipeline(self) -> None:
         """Load pyannote.audio Pipeline with fixes for short-clip diarization."""
         import os
+        import torch
         from pyannote.audio import Pipeline
+
+        # PyTorch 2.6+ defaults weights_only=True; allowlist TorchVersion which
+        # is stored inside pyannote checkpoint files.
+        try:
+            from torch.torch_version import TorchVersion
+            torch.serialization.add_safe_globals([TorchVersion])
+        except Exception:
+            pass
 
         # Load .env if available
         try:
